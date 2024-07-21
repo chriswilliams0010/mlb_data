@@ -48,11 +48,11 @@ def scrape_all_player_links() -> pd.DataFrame:
     Returns: pandas.DataFrame: A DataFrame containing player names and URLs for all letters.
     '''
     all_players_data = []
+
     for letter in string.ascii_lowercase:
         logging.info(f"Scraping players starting with letter: {letter}")
         p_dat = scrape_player_links_by_letter(letter)
         logging.info(f"Letter {letter} has {len(p_dat)} players.")
-        n += len(p_dat)
         all_players_data.extend(p_dat)
         logging.info(f"All players from letter {letter} added.")
         time.sleep(5)
@@ -60,5 +60,31 @@ def scrape_all_player_links() -> pd.DataFrame:
     return pd.DataFrame(all_players_data)
 
 
+def scrape_teams() -> pd.DataFrame:
+    '''
+    Scrape team data.
+
+    Returns: pandas.DataFrame: A DataFrame containing data for teams and corresponding url.
+    '''
+    logging.info("Scraping teams.")
+    teams_url = f"{base_url}/teams/"
+    teams_page = requests.get(teams_url)
+    soup = BeautifulSoup(teams_page.content, 'html.parser')
+    active_content = soup.find('div', id='div_teams_active')
+    logging.info("Extracting teams.")
+    act_body = active_content.find('tbody')
+    team_link = []
+    for tr in act_body.find_all('tr'):
+        t = tr.find('a')
+        if t != None:
+            team_link.append((t.text, t['href']))
+            logging.info(f"Team added: {t.text}, corresponding url: {t['href']}")
+    logging.info("Deduping teams.")
+    team_link = [{'team': t[0], 'url': t[1]} for t in list(set(team_link))]
+    logging.info(f"Total number of teams: {len(team_link)}")
+    return pd.DataFrame(team_link)
+
+
 if __name__ == "__main__":
-    df = scrape_all_player_links()
+    player_df = scrape_all_player_links()
+    team_df = scrape_teams()
